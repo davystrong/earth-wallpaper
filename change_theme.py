@@ -7,10 +7,10 @@ class Theme(Enum):
 
 
 def changeTheme(theme):
-    """
-    This changes the Windows 10 app theme to light or dark.
-    :param theme: Either LIGHT (True) or dark DARK (False)
-    :type theme: Theme or bool
+    """This changes the Windows 10 app theme to light or dark.
+
+    Args:
+        theme (Theme | bool): Either LIGHT (True) or dark DARK (False)
     """
 
     from winreg import OpenKey, SetValueEx, QueryValueEx, CloseKey, CreateKey, HKEY_CURRENT_USER, KEY_ALL_ACCESS, REG_DWORD
@@ -31,6 +31,11 @@ def changeTheme(theme):
 
 
 def isDay():
+    """Checks if the time is after sunset
+
+    Returns:
+        bool: Day time
+    """
     import datetime
     from pytz import timezone, utc
     from astral import LocationInfo
