@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
         # Sets wallpaper
         ctypes.windll.user32.SystemParametersInfoW(
-            20, 0, cwd+r'\ftp_earth_images\earth_1920x1080.png', 3)
+            20, 0, cwd+r'\ftp_earth_images\earth_'+f'{sizes[0][0]}x{sizes[0][1]}.png', 3)
 
     else:
         print("Running on a metered network. Won't update")
