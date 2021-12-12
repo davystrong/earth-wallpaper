@@ -18,7 +18,7 @@ def metered() -> bool:
         return subprocess.run(['busctl', 'get-property', 'org.freedesktop.NetworkManager', '/org/freedesktop/NetworkManager',
                                'org.freedesktop.NetworkManager', 'Metered'], capture_output=True).stdout.strip()[2:] in ['1', '3']
     elif sys.platform == "darwin":
-        # Not implemented yet
+        # Not implemented yet. Doesn't exist on Mac
         pass
     elif sys.platform == "win32":
         CREATE_NO_WINDOW = 0x08000000
@@ -96,8 +96,10 @@ if __name__ == '__main__':
             subprocess.run(['env', 'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus', 'xfconf-query',
                            '--channel', 'xfce4-desktop', '--property', WALLPAPER_PROPERTY, '--set', image_path])
         elif sys.platform == "darwin":
-            # Not implemented yet
-            pass
+            # It's easier just to use the automator to set the wallpaper
+            image_path = f'{cwd}/ftp_earth_images/earth_{sizes[0][0]}x{sizes[0][1]}.png'
+            print(image_path)
+            # subprocess.run(["osascript", "-e", "tell application \"System Events\" to tell every desktop to set picture to \"{image_path}\""])
         elif sys.platform == "win32":
             ctypes.windll.user32.SystemParametersInfoW(
                 20, 0, cwd+r'\ftp_earth_images\earth_'+f'{sizes[0][0]}x{sizes[0][1]}.png', 3)
