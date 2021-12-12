@@ -18,13 +18,13 @@ def metered() -> bool:
     """
     if sys.platform in ("linux", "linux2"):
         return subprocess.run(['busctl', 'get-property', 'org.freedesktop.NetworkManager', '/org/freedesktop/NetworkManager',
-                               'org.freedesktop.NetworkManager', 'Metered'], capture_output=True).stdout.strip()[2:] in ['1', '3']
+                               'org.freedesktop.NetworkManager', 'Metered'], capture_output=True, check=True).stdout.strip()[2:] in ['1', '3']
     elif sys.platform == "darwin":
         # Not implemented yet. Doesn't exist on Mac
         pass
     elif sys.platform == "win32":
         CREATE_NO_WINDOW = 0x08000000
-        return subprocess.run(['powershell', '-File', './metered.ps1'], capture_output=True, creationflags=CREATE_NO_WINDOW).stdout.strip() == b'True'
+        return subprocess.run(['powershell', '-File', './metered.ps1'], capture_output=True, creationflags=CREATE_NO_WINDOW, check=True).stdout.strip() == b'True'
     return False
 
 
@@ -83,7 +83,6 @@ if __name__ == '__main__':
                     pixels[i, j] = (0, 0, 0)
 
         # cwd = os.getcwd()
-        import os
         cwd = Path(os.path.realpath(__file__)).parent
         try:
             (cwd / 'ftp_earth_images').mkdir()
@@ -106,20 +105,18 @@ if __name__ == '__main__':
                             str(size[0])+'x'+str(size[1])+'.png'))
 
         # Sets wallpaper
+        image_path = str(
+            cwd/'ftp_earth_images'/f'earth_{sizes[0][0]}x{sizes[0][1]}.png')
         if sys.platform in ("linux", "linux2"):
-            image_path = str(
-                cwd/f'ftp_earth_images/earth_{sizes[0][0]}x{sizes[0][1]}.png')
             WALLPAPER_PROPERTY = '/backdrop/screen0/monitoreDP-1/workspace0/last-image'
             subprocess.run(['env', 'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus', 'xfconf-query',
-                           '--channel', 'xfce4-desktop', '--property', WALLPAPER_PROPERTY, '--set', image_path])
+                           '--channel', 'xfce4-desktop', '--property', WALLPAPER_PROPERTY, '--set', image_path], check=True)
         elif sys.platform == "darwin":
-            image_path = str(
-                cwd/f'ftp_earth_images/earth_{sizes[0][0]}x{sizes[0][1]}.png')
             subprocess.run(
-                ["osascript", "-e", f"tell application \"System Events\" to tell every desktop to set picture to \"{image_path}\""])
+                ["osascript", "-e", f"tell application \"System Events\" to tell every desktop to set picture to \"{image_path}\""], check=True)
         elif sys.platform == "win32":
             ctypes.windll.user32.SystemParametersInfoW(
-                20, 0, cwd+r'\ftp_earth_images\earth_'+f'{sizes[0][0]}x{sizes[0][1]}.png', 3)
+                20, 0, image_path, 3)
 
     else:
         print("Running on a metered network. Won't update")
