@@ -6,6 +6,7 @@ from io import BytesIO
 from change_theme import changeTheme, isDay
 import subprocess
 import sys
+from pathlib import Path
 
 
 def metered() -> bool:
@@ -28,11 +29,11 @@ def metered() -> bool:
 
 if __name__ == '__main__':
     # List of output sizes
-    sizes = [(1920, 1080)]
+    sizes = [(3456, 2234)]
 
     # The image size to download. It's more efficient to download the closest
     # size to your need
-    side = 1808
+    side = 5424
 
     base = 'https://cdn.star.nesdis.noaa.gov/GOES16/ABI/FD/GEOCOLOR/{}.jpg'
     resolution = str(side)+'x'+str(side)
@@ -68,9 +69,11 @@ if __name__ == '__main__':
                 if pixels[i, j] < (2, 2, 2):
                     pixels[i, j] = (0, 0, 0)
 
-        cwd = os.getcwd()
+        # cwd = os.getcwd()
+        import os
+        cwd = Path(os.path.realpath(__file__)).parent
         try:
-            os.mkdir(cwd + r'/ftp_earth_images')
+            (cwd / 'ftp_earth_images').mkdir()
         except FileExistsError:
             pass
 
@@ -86,18 +89,20 @@ if __name__ == '__main__':
                 map(lambda x: int((x[0]-x[1])/2), zip(size, cropped_image.size))))
 
             # Save output
-            background.save('ftp_earth_images/earth'+'_' +
-                            str(size[0])+'x'+str(size[1])+'.png')
+            background.save(cwd / ('ftp_earth_images/earth'+'_' +
+                            str(size[0])+'x'+str(size[1])+'.png'))
 
         # Sets wallpaper
         if sys.platform in ("linux", "linux2"):
-            image_path = f'{cwd}/ftp_earth_images/earth_{sizes[0][0]}x{sizes[0][1]}.png'
+            image_path = str(
+                cwd/f'ftp_earth_images/earth_{sizes[0][0]}x{sizes[0][1]}.png')
             WALLPAPER_PROPERTY = '/backdrop/screen0/monitoreDP-1/workspace0/last-image'
             subprocess.run(['env', 'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus', 'xfconf-query',
                            '--channel', 'xfce4-desktop', '--property', WALLPAPER_PROPERTY, '--set', image_path])
         elif sys.platform == "darwin":
             # It's easier just to use the automator to set the wallpaper
-            image_path = f'{cwd}/ftp_earth_images/earth_{sizes[0][0]}x{sizes[0][1]}.png'
+            image_path = str(
+                cwd/f'ftp_earth_images/earth_{sizes[0][0]}x{sizes[0][1]}.png')
             print(image_path)
             # subprocess.run(["osascript", "-e", "tell application \"System Events\" to tell every desktop to set picture to \"{image_path}\""])
         elif sys.platform == "win32":
