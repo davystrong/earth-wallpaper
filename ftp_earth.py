@@ -1,21 +1,29 @@
 from PIL import Image
-import PIL
 import ctypes
 import os
 import requests
 from io import BytesIO
 from change_theme import changeTheme, isDay
 import subprocess
+import sys
 
 
-def metered():
+def metered() -> bool:
     """Checks if the system is running on a metered connection
 
     Returns:
         bool: Network is metered
     """
-    CREATE_NO_WINDOW = 0x08000000
-    return subprocess.run(['powershell', '-File', './metered.ps1'], capture_output=True, creationflags=CREATE_NO_WINDOW).stdout.strip() == b'True'
+    if sys.platform in ("linux", "linux2"):
+        return subprocess.run(['busctl', 'get-property', 'org.freedesktop.NetworkManager', '/org/freedesktop/NetworkManager',
+                               'org.freedesktop.NetworkManager', 'Metered'], capture_output=True).stdout.strip()[2:] in ['1', '3']
+    elif sys.platform == "darwin":
+        # Not implemented yet
+        pass
+    elif sys.platform == "win32":
+        CREATE_NO_WINDOW = 0x08000000
+        return subprocess.run(['powershell', '-File', './metered.ps1'], capture_output=True, creationflags=CREATE_NO_WINDOW).stdout.strip() == b'True'
+    return False
 
 
 if __name__ == '__main__':
@@ -35,15 +43,19 @@ if __name__ == '__main__':
         response = requests.get(url)
         image = Image.open(BytesIO(response.content))
         pixels = image.load()
+        assert pixels is not None
 
         # Remove white bar
+        cropped_image = None
         for i in range(image.height-1, 0, -1):
             if pixels[image.width-1, i] < (3, 3, 3):
                 cropped_image = image.crop((0, 0, image.width, i+1))
                 break
+        assert cropped_image is not None
 
         # Reload cropped image
         pixels = cropped_image.load()
+        assert pixels is not None
 
         # Make NOAA logo black
         for i in range(int(cropped_image.width*1/10)):
@@ -58,7 +70,7 @@ if __name__ == '__main__':
 
         cwd = os.getcwd()
         try:
-            os.mkdir(cwd + r'\ftp_earth_images')
+            os.mkdir(cwd + r'/ftp_earth_images')
         except FileExistsError:
             pass
 
@@ -66,7 +78,7 @@ if __name__ == '__main__':
         for size in sizes:
             # Shrink to size, maintain aspect ratio
             cropped_image.thumbnail(
-                (int(size[0]*0.9), int(size[1]*0.9)), PIL.Image.ANTIALIAS)
+                (int(size[0]*0.9), int(size[1]*0.9)), Image.ANTIALIAS)
 
             # Add background to the right size
             background = Image.new('RGB', size, (0, 0, 0))
@@ -78,10 +90,20 @@ if __name__ == '__main__':
                             str(size[0])+'x'+str(size[1])+'.png')
 
         # Sets wallpaper
-        ctypes.windll.user32.SystemParametersInfoW(
-            20, 0, cwd+r'\ftp_earth_images\earth_'+f'{sizes[0][0]}x{sizes[0][1]}.png', 3)
+        if sys.platform in ("linux", "linux2"):
+            image_path = f'{cwd}/ftp_earth_images/earth_{sizes[0][0]}x{sizes[0][1]}.png'
+            WALLPAPER_PROPERTY = '/backdrop/screen0/monitoreDP-1/workspace0/last-image'
+            subprocess.run(['env', 'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus', 'xfconf-query',
+                           '--channel', 'xfce4-desktop', '--property', WALLPAPER_PROPERTY, '--set', image_path])
+        elif sys.platform == "darwin":
+            # Not implemented yet
+            pass
+        elif sys.platform == "win32":
+            ctypes.windll.user32.SystemParametersInfoW(
+                20, 0, cwd+r'\ftp_earth_images\earth_'+f'{sizes[0][0]}x{sizes[0][1]}.png', 3)
 
     else:
         print("Running on a metered network. Won't update")
 
-    changeTheme(isDay())
+    if sys.platform == "win32":
+        changeTheme(isDay())
