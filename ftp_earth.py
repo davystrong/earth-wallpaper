@@ -7,6 +7,7 @@ from change_theme import changeTheme, isDay
 import subprocess
 import sys
 from pathlib import Path
+from argparse import ArgumentParser
 
 
 def metered() -> bool:
@@ -28,12 +29,24 @@ def metered() -> bool:
 
 
 if __name__ == '__main__':
+    parser = ArgumentParser()
+    parser.add_argument('output_res', metavar='RESOLUTION',
+                        nargs='*', default=['1920x1080'])
+    parser.add_argument('-f', '--flex', type=float, default=0.9,
+                        help='Allow the input to be smaller than the output and scaled up')
+    args = parser.parse_args()
+
     # List of output sizes
-    sizes = [(3456, 2234)]
+    sizes = [tuple(int(x) for x in res.split('x')) for res in args.output_res]
+
+    max_size = max(s for size in sizes for s in size)
 
     # The image size to download. It's more efficient to download the closest
     # size to your need
-    side = 5424
+    avail_sizes = [339, 678, 1808, 5424, 10848]
+    valid_sizes = sorted(
+        size for size in avail_sizes if size > max_size*args.flex)
+    side = valid_sizes[0]
 
     base = 'https://cdn.star.nesdis.noaa.gov/GOES16/ABI/FD/GEOCOLOR/{}.jpg'
     resolution = str(side)+'x'+str(side)
@@ -100,11 +113,10 @@ if __name__ == '__main__':
             subprocess.run(['env', 'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus', 'xfconf-query',
                            '--channel', 'xfce4-desktop', '--property', WALLPAPER_PROPERTY, '--set', image_path])
         elif sys.platform == "darwin":
-            # It's easier just to use the automator to set the wallpaper
             image_path = str(
                 cwd/f'ftp_earth_images/earth_{sizes[0][0]}x{sizes[0][1]}.png')
-            print(image_path)
-            # subprocess.run(["osascript", "-e", "tell application \"System Events\" to tell every desktop to set picture to \"{image_path}\""])
+            subprocess.run(
+                ["osascript", "-e", f"tell application \"System Events\" to tell every desktop to set picture to \"{image_path}\""])
         elif sys.platform == "win32":
             ctypes.windll.user32.SystemParametersInfoW(
                 20, 0, cwd+r'\ftp_earth_images\earth_'+f'{sizes[0][0]}x{sizes[0][1]}.png', 3)
